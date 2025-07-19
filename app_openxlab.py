@@ -1,31 +1,24 @@
 import random
 import os
-from argparse import ArgumentParser
 
 import gradio as gr
 import torchvision.transforms as transforms
 from accelerate.utils import set_seed
-from omegaconf import OmegaConf
-from dotenv import load_dotenv
 from PIL import Image
 
 from HYPIR.enhancer.sd2 import SD2Enhancer
-from HYPIR.utils.captioner import GPTCaptioner
 
 
-load_dotenv()
-error_image = Image.open(os.path.join("assets", "gradio_error_img.png"))
+work_dir = "/home/xlab-app-center"
 
-parser = ArgumentParser()
-parser.add_argument("--config", type=str, required=True)
-parser.add_argument("--local", action="store_true")
-parser.add_argument("--port", type=int, default=7860)
-parser.add_argument("--gpt_caption", action="store_true")
-parser.add_argument("--max_size", type=str, default=None, help="Comma-seperated image size")
-parser.add_argument("--device", type=str, default="cuda")
-args = parser.parse_args()
+# Download weight
+model_dir = os.path.join(work_dir, "HYPIR-openxlab-model")
+print(f"Download model to {model_dir}")
+os.system(f"git clone https://code.openxlab.org.cn/linxinqi/HYPIR.git {model_dir}")
+os.system(f"cd {model_dir} && git lfs pull")
+print("Done")
 
-max_size = args.max_size
+max_size = os.getenv("HYPIR_APP_MAX_SIZE")
 if max_size is not None:
     max_size = tuple(int(x) for x in max_size.split(","))
     if len(max_size) != 2:
@@ -34,39 +27,36 @@ if max_size is not None:
     print(f"Max size set to {max_size}, max pixels: {max_pixels}")
 else:
     max_pixels = None
-
-if args.gpt_caption:
-    if (
-        "GPT_API_KEY" not in os.environ
-        or "GPT_BASE_URL" not in os.environ
-        or "GPT_MODEL" not in os.environ
-    ):
-        raise ValueError(
-            "If you want to use gpt-generated caption, "
-            "please specify both `GPT_API_KEY`, `GPT_BASE_URL` and `GPT_MODEL` in your .env file. "
-            "See README.md for more details."
-        )
-    captioner = GPTCaptioner(
-        api_key=os.getenv("GPT_API_KEY"),
-        base_url=os.getenv("GPT_BASE_URL"),
-        model=os.getenv("GPT_MODEL"),
-    )
+device = os.getenv("HYPIR_APP_DEVICE")
+error_image = Image.open(os.path.join("assets", "gradio_error_img.png"))
 to_tensor = transforms.ToTensor()
 
-config = OmegaConf.load(args.config)
-if config.base_model_type == "sd2":
-    model = SD2Enhancer(
-        base_model_path=config.base_model_path,
-        weight_path=config.weight_path,
-        lora_modules=config.lora_modules,
-        lora_rank=config.lora_rank,
-        model_t=config.model_t,
-        coeff_t=config.coeff_t,
-        device=args.device,
-    )
-    model.init_models()
-else:
-    raise ValueError(config.base_model_type)
+model = SD2Enhancer(
+    base_model_path="stabilityai/stable-diffusion-2-1-base",
+    weight_path=os.path.join(model_dir, "HYPIR_sd2.pth"),
+    lora_modules=[
+        "to_k",
+        "to_q",
+        "to_v",
+        "to_out.0",
+        "conv",
+        "conv1",
+        "conv2",
+        "conv_shortcut",
+        "conv_out",
+        "proj_in",
+        "proj_out",
+        "ff.net.2",
+        "ff.net.0.proj",
+    ],
+    lora_rank=256,
+    model_t=200,
+    coeff_t=200,
+    device=device,
+)
+print("Start to load model")
+model.init_models()
+print("Done")
 
 
 def process(
@@ -89,11 +79,6 @@ def process(
                 f"Your requested resolution is ({out_h}, {out_w}). "
                 f"The maximum allowed pixel count is {max_pixels} :("
             )
-    if prompt == "auto":
-        if args.gpt_caption:
-            prompt = captioner(image)
-        else:
-            return error_image, "Failed: This gradio is not launched with gpt-caption support :("
 
     image_tensor = to_tensor(image).unsqueeze(0)
     try:
@@ -124,10 +109,7 @@ with block:
     with gr.Row():
         with gr.Column():
             image = gr.Image(type="pil")
-            prompt = gr.Textbox(label=(
-                "Prompt (Input 'auto' to use gpt-generated caption)"
-                if args.gpt_caption else "Prompt"
-            ))
+            prompt = gr.Textbox(label="Prompt")
             upscale = gr.Slider(minimum=1, maximum=8, value=1, label="Upscale Factor", step=1)
             seed = gr.Number(label="Seed", value=-1)
             run = gr.Button(value="Run")
@@ -139,4 +121,4 @@ with block:
             inputs=[image, prompt, upscale, seed],
             outputs=[result, status],
         )
-block.launch(server_name="0.0.0.0" if not args.local else "127.0.0.1", server_port=args.port)
+block.launch()
