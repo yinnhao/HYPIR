@@ -2,7 +2,7 @@ output_dir: TODO
 
 data_config:
   train:
-    batch_size: 4
+    batch_size: 6
     dataloader_num_workers: 2
     dataset:
       target: HYPIR.dataset.realesrgan.RealESRGANDataset
@@ -73,7 +73,7 @@ base_model_type: sd2
 base_model_path: stabilityai/stable-diffusion-2-1-base
 model_t: 200
 coeff_t: 200
-lora_rank: 32
+lora_rank: 256
 lora_modules: [to_k, to_q, to_v, to_out.0, conv, conv1, conv2, conv_shortcut, conv_out, proj_in, proj_out, ff.net.2, ff.net.0.proj]
 use_ema: true
 ema_decay: 0.999
