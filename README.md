@@ -1,0 +1,134 @@
+<p align="center">
+    <img src="assets/logo.png" width="400">
+</p>
+
+## HYPIR: Harnessing Diffusion-Yielded Score Priors for Image Restoration
+
+[Paper](TODO) | [Project Page](TODO)
+
+![visitors](https://visitor-badge.laobi.icu/badge?page_id=XPixelGroup/HYPIR) [![Try a demo on Replicate](https://replicate.com/0x3f3f3f3fun/hypir-sd2/badge)](https://replicate.com/0x3f3f3f3fun/hypir-sd2) [![Open in OpenXLab](https://cdn-static.openxlab.org.cn/app-center/openxlab_app.svg)](TODO)
+
+Xinqi Lin<sup>1,2</sup>, [Fanghua Yu](https://github.com/Fanghua-Yu)<sup>1</sup>, Jinfan Hu<sup>1,2</sup>, Zhiyuan You<sup>1,3</sup>, Wu Shi<sup>1</sup>, Jimmy S. Ren<sup>4,5</sup>, [Jinjin Gu](https://www.jasongt.com/)<sup>6</sup>, [Chao Dong](https://scholar.google.com.hk/citations?user=OSDCB0UAAAAJ)<sup>1</sup>
+
+<sup>1</sup>Shenzhen Institutes of Advanced Technology, Chinese Academy of Sciences<br><sup>2</sup>University of Chinese Academy of Sciences<br><sup>3</sup>The Chinese University of Hong Kong<br><sup>4</sup>SenseTime Research<br><sup>5</sup>Hong Kong Metropolitan University<br><sup>6</sup>INSAIT, Sofia University
+
+<p align="center">
+    <img src="assets/teaser.png">
+</p>
+
+:star:If HypIR is helpful for you, please help star this repo. Thanks!:hugs:
+
+## :book:Table Of Contents
+
+- [What's Next](#next)
+- [Update](#update)
+- [Installation](#installation)
+- [Pretrained Models](#pretrained_models)
+- [Quick Start](#quick_start)
+- [Train](#train)
+
+## <a name="next"></a>:soon:What's Next
+
+Our current open-source version is based on the Stable Diffusion 2.1 small model.
+
+We'll provide access to more advanced models based on **FLUX** and **Stable Diffusion 3.5** through web interfaces and APIs in the future. Stay tuned!:sparkles:
+
+## <a name="update"></a>:new:Update
+
+- **2025.07.19**: :white_check_mark: Integrated to [replicate](https://replicate.com/0x3f3f3f3fun/hypir-sd2).
+- **2025.07.19**: This repo is created.
+
+## <a name="installation"></a>:gear:Installation
+
+```shell
+git clone https://github.com/XPixelGroup/HYPIR.git
+cd HYPIR
+conda create -n hypir python=3.10
+conda activate hypir
+pip install -r requirements.txt
+```
+
+## <a name="pretrained_models"></a>:dna:Pretrained Models
+
+| Model Name | Description | HuggingFace | OpenXLab |
+| :---------: | :----------: | :----------: | :----------: |
+| HYPIR_sd2.pth | Lora weights of HYPIR-SD2 | [download](https://huggingface.co/lxq007/HYPIR/tree/main) | [download](https://openxlab.org.cn/models/detail/linxinqi/HYPIR/tree/main) |
+
+## <a name="quick_start"></a>:flight_departure:Quick Start
+
+1. Download model weight `HYPIR_sd2.pth`.
+
+2. Fill `weight_path` in [configs/sd2_gradio.yaml](configs/sd2_gradio.yaml).
+
+3. Run the following command to launch gradio.
+
+    ```shell
+    python app.py --config configs/sd2_gradio.yaml --local --device cuda
+    ```
+
+<div align="center">
+    <kbd><img src="assets/gradio.png"></img></kbd>
+</div>
+
+## <a name="train"></a>:stars:Train
+
+1. Generate a parquet file to save both image paths and prompts. For example:
+
+    ```python
+    import os
+    import polars as pl
+    # Recursively collect image files.
+    image_dir = "/opt/data/common/data260t/LSDIR_512"
+    image_exts = (".jpg", ".jpeg", ".png")
+    image_paths = []
+    for root, dirs, files in os.walk(image_dir):
+        for file in files:
+            if file.lower().endswith(image_exts):
+                image_paths.append(os.path.join(root, file))
+    # Create dataframe object with prompts. Here we use empty 
+    # prompt for simplicity.
+    df = pl.from_dict({
+        "image_path": image_paths,
+        "prompt": [""] * len(image_paths)
+    })
+    # Save as parquet file, which will be used in the next step.
+    df.write_parquet("path/to/save/LSDIR_512_nulltxt.parquet")
+    ```
+
+2. Fill in the values marked as TODO in [configs/sd2_train.yaml](configs/sd2_train.yaml). For example:
+
+    ```yaml
+    output_dir: /path/to/save/experiment
+    data_config:
+      train:
+        ...
+        dataset:
+          target: HYPIR.dataset.realesrgan.RealESRGANDataset
+          params:
+            file_meta:
+              file_list: path/to/save/LSDIR_512_nulltxt.parquet
+              image_path_prefix: ""
+              image_path_key: image_path
+              prompt_key: prompt
+            ...
+    ```
+
+3. Start training.
+
+    ```shell
+    accelerate launch train.py --config configs/sd2_train.yaml
+    ```
+
+## :email: Contact
+If you have any question, please email `xqlin0613@gmail.com` or `jinjin.gu@suppixel.ai`.
+
+## Non-Commercial Use Only Declaration
+The HYPIR ("Software") is made available for use, reproduction, and distribution strictly for non-commercial purposes. For the purposes of this declaration, "non-commercial" is defined as not primarily intended for or directed towards commercial advantage or monetary compensation.
+
+By using, reproducing, or distributing the Software, you agree to abide by this restriction and not to use the Software for any commercial purposes without obtaining prior written permission from Dr. Jinjin Gu.
+
+This declaration does not in any way limit the rights under any open source license that may apply to the Software; it solely adds a condition that the Software shall not be used for commercial purposes.
+
+IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+For inquiries or to obtain permission for commercial use, please contact Dr. Jinjin Gu (jinjin.gu@suppixel.ai).
