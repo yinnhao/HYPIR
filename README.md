@@ -37,6 +37,8 @@ We'll provide access to more advanced models based on **FLUX** and **Stable Diff
 
 ## <a name="update"></a>:new:Update
 
+- **2025.07.28**: :white_check_mark: Provide [colab](https://colab.research.google.com/drive/1MbpICKc22S6ysD32uj3ORkqg6AgZrNpx?usp=sharing) example.
+- **2025.07.28**: :white_check_mark: Integrated to [openxlab](https://openxlab.org.cn/apps/detail/linxinqi/HYPIR-SD2).
 - **2025.07.19**: :white_check_mark: Integrated to [replicate](https://replicate.com/0x3f3f3f3fun/hypir-sd2).
 - **2025.07.19**: This repo is created.
 
