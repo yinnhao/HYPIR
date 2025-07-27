@@ -6,7 +6,7 @@
 
 [Paper](TODO) | [Project Page](TODO)
 
-![visitors](https://visitor-badge.laobi.icu/badge?page_id=XPixelGroup/HYPIR) [![Try a demo on Replicate](https://replicate.com/0x3f3f3f3fun/hypir-sd2/badge)](https://replicate.com/0x3f3f3f3fun/hypir-sd2) [![Open in OpenXLab](https://cdn-static.openxlab.org.cn/app-center/openxlab_app.svg)](https://openxlab.org.cn/apps/detail/linxinqi/HYPIR-SD2)
+![visitors](https://visitor-badge.laobi.icu/badge?page_id=XPixelGroup/HYPIR) [![Try a demo on Replicate](https://replicate.com/0x3f3f3f3fun/hypir-sd2/badge)](https://replicate.com/0x3f3f3f3fun/hypir-sd2) [![Open in OpenXLab](https://cdn-static.openxlab.org.cn/app-center/openxlab_app.svg)](https://openxlab.org.cn/apps/detail/linxinqi/HYPIR-SD2) [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1MbpICKc22S6ysD32uj3ORkqg6AgZrNpx?usp=sharing)
 
 Xinqi Lin<sup>1,2</sup>, [Fanghua Yu](https://github.com/Fanghua-Yu)<sup>1</sup>, Jinfan Hu<sup>1,2</sup>, [Zhiyuan You](https://zhiyuanyou.github.io/)<sup>1,3</sup>, Wu Shi<sup>1</sup>, [Jimmy S. Ren](https://www.jimmyren.com/)<sup>4,5</sup>, [Jinjin Gu](https://www.jasongt.com/)<sup>6,\*</sup>, [Chao Dong](https://scholar.google.com.hk/citations?user=OSDCB0UAAAAJ)<sup>1,\*</sup>
 
@@ -67,6 +67,19 @@ pip install -r requirements.txt
     ```shell
     python app.py --config configs/sd2_gradio.yaml --local --device cuda
     ```
+4. (Optional) Tired of manually typing out prompts for your images? Let GPT do the work for you!
+
+    First, create a file named `.env` in the project directory.
+
+    ```conf
+    GPT_API_KEY=your-awesome-api-key
+    GPT_BASE_URL=openai-gpt-base-url
+    GPT_MODEL=gpt-4o-mini
+    ```
+
+    Second, add your API base URL and API key in the `.env` file. For the model, 4o-mini is usually sufficient.
+
+    Finally, pass `--gpt_caption` argument to the program, and type "auto" in the prompt box to use GPT-generated prompt.
 
 <div align="center">
     <kbd><img src="assets/gradio.png"></img></kbd>
