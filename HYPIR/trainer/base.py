@@ -124,7 +124,7 @@ class BaseTrainer:
 
     def init_lpips(self):
         with warnings.catch_warnings():
-            # Supress warnings from lpips
+            # Suppress warnings from lpips
             warnings.simplefilter("ignore")
             self.net_lpips = lpips.LPIPS(net="vgg", verbose=False).to(self.device)
         self.net_lpips.eval().requires_grad_(False)
@@ -134,7 +134,7 @@ class BaseTrainer:
         ...
 
     def init_discriminator(self):
-        # Supress logs from lpips
+        # Suppress logs from open-clip
         ctx = (
             nullcontext()
             if self.accelerator.is_local_main_process

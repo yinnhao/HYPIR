@@ -8,7 +8,9 @@
 
 ![visitors](https://visitor-badge.laobi.icu/badge?page_id=XPixelGroup/HYPIR) [![Try a demo on Replicate](https://replicate.com/0x3f3f3f3fun/hypir-sd2/badge)](https://replicate.com/0x3f3f3f3fun/hypir-sd2) [![Open in OpenXLab](https://cdn-static.openxlab.org.cn/app-center/openxlab_app.svg)](TODO)
 
-Xinqi Lin<sup>1,2</sup>, [Fanghua Yu](https://github.com/Fanghua-Yu)<sup>1</sup>, Jinfan Hu<sup>1,2</sup>, Zhiyuan You<sup>1,3</sup>, Wu Shi<sup>1</sup>, Jimmy S. Ren<sup>4,5</sup>, [Jinjin Gu](https://www.jasongt.com/)<sup>6</sup>, [Chao Dong](https://scholar.google.com.hk/citations?user=OSDCB0UAAAAJ)<sup>1</sup>
+Xinqi Lin<sup>1,2</sup>, [Fanghua Yu](https://github.com/Fanghua-Yu)<sup>1</sup>, Jinfan Hu<sup>1,2</sup>, [Zhiyuan You](https://zhiyuanyou.github.io/)<sup>1,3</sup>, Wu Shi<sup>1</sup>, [Jimmy S. Ren](https://www.jimmyren.com/)<sup>4,5</sup>, [Jinjin Gu](https://www.jasongt.com/)<sup>6,\*</sup>, [Chao Dong](https://scholar.google.com.hk/citations?user=OSDCB0UAAAAJ)<sup>1,\*</sup>
+
+\*: Corresponding author
 
 <sup>1</sup>Shenzhen Institutes of Advanced Technology, Chinese Academy of Sciences<br><sup>2</sup>University of Chinese Academy of Sciences<br><sup>3</sup>The Chinese University of Hong Kong<br><sup>4</sup>SenseTime Research<br><sup>5</sup>Hong Kong Metropolitan University<br><sup>6</sup>INSAIT, Sofia University
 
@@ -77,7 +79,9 @@ pip install -r requirements.txt
     ```python
     import os
     import polars as pl
-    # Recursively collect image files.
+    # Recursively collect image files. For example, you can crop 
+    # the LSDIR dataset into 512x512 patches and place all patches 
+    # in one folder.
     image_dir = "/opt/data/common/data260t/LSDIR_512"
     image_exts = (".jpg", ".jpeg", ".png")
     image_paths = []
@@ -120,7 +124,10 @@ pip install -r requirements.txt
     ```
 
 ## :email: Contact
-If you have any question, please email `xqlin0613@gmail.com` or `jinjin.gu@suppixel.ai`.
+
+For questions about code or paper, please email `xqlin0613@gmail.com`.
+
+For authorization and collaboration inquiries, please email `jinjin.gu@suppixel.ai`.
 
 ## Non-Commercial Use Only Declaration
 The HYPIR ("Software") is made available for use, reproduction, and distribution strictly for non-commercial purposes. For the purposes of this declaration, "non-commercial" is defined as not primarily intended for or directed towards commercial advantage or monetary compensation.
