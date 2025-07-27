@@ -18,7 +18,7 @@ Xinqi Lin<sup>1,2</sup>, [Fanghua Yu](https://github.com/Fanghua-Yu)<sup>1</sup>
     <img src="assets/teaser.png">
 </p>
 
-:star:If HypIR is helpful for you, please help star this repo. Thanks!:hugs:
+:star:If HYPIR is helpful for you, please help star this repo. Thanks!:hugs:
 
 ## :book:Table Of Contents
 

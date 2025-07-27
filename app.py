@@ -30,10 +30,7 @@ if max_size is not None:
     max_size = tuple(int(x) for x in max_size.split(","))
     if len(max_size) != 2:
         raise ValueError(f"Invalid max size: {max_size}")
-    max_pixels = max_size[0] * max_size[1]
-    print(f"Max size set to {max_size}, max pixels: {max_pixels}")
-else:
-    max_pixels = None
+    print(f"Max size set to {max_size}, max pixels: {max_size[0] * max_size[1]}")
 
 if args.gpt_caption:
     if (
@@ -81,13 +78,14 @@ def process(
     set_seed(seed)
     image = image.convert("RGB")
     # Check image size
-    if max_pixels is not None:
+    if max_size is not None:
         out_w, out_h = tuple(int(x * upscale) for x in image.size)
-        if out_w * out_h > max_pixels:
+        if out_w * out_h > max_size[0] * max_size[1]:
             return error_image, (
                 "Failed: The requested resolution exceeds the maximum pixel limit. "
                 f"Your requested resolution is ({out_h}, {out_w}). "
-                f"The maximum allowed pixel count is {max_pixels} :("
+                f"The maximum allowed pixel count is {max_size[0]} x {max_size[1]} "
+                f"= {max_size[0] * max_size[1]} :("
             )
     if prompt == "auto":
         if args.gpt_caption:
