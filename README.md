@@ -123,7 +123,7 @@ pip install -r requirements.txt
           target: HYPIR.dataset.realesrgan.RealESRGANDataset
           params:
             file_meta:
-              file_list: path/to/save/LSDIR_512_nulltxt.parquet
+              file_list: path/to/LSDIR_512_nulltxt.parquet
               image_path_prefix: ""
               image_path_key: image_path
               prompt_key: prompt
