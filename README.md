@@ -4,7 +4,7 @@
 
 ## HYPIR: Harnessing Diffusion-Yielded Score Priors for Image Restoration
 
-[Paper](TODO) | [Project Page](TODO)
+Paper (coming soon) | Project Page (coming soon)
 
 ![visitors](https://visitor-badge.laobi.icu/badge?page_id=XPixelGroup/HYPIR) [![Try a demo on Replicate](https://replicate.com/0x3f3f3f3fun/hypir-sd2/badge)](https://replicate.com/0x3f3f3f3fun/hypir-sd2) [![Open in OpenXLab](https://cdn-static.openxlab.org.cn/app-center/openxlab_app.svg)](https://openxlab.org.cn/apps/detail/linxinqi/HYPIR-SD2) [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1MbpICKc22S6ysD32uj3ORkqg6AgZrNpx?usp=sharing)
 
