@@ -31,7 +31,7 @@ Xinqi Lin<sup>1,2</sup>, [Fanghua Yu](https://github.com/Fanghua-Yu)<sup>1</sup>
 
 ## <a name="next"></a>:soon:What's Next
 
-Our current open-source version is based on the Stable Diffusion 2.1 small model.
+Our current open-source version is based on the Stable Diffusion 2.1. While the number of parameters is small, this model was trained on our best-quality data and with significant computational resources (batch size 1024). Therefore, its performance is also quite good.
 
 We'll provide access to more advanced models based on **FLUX** and **Stable Diffusion 3.5** through web interfaces and APIs in the future. Stay tuned!✨
 
