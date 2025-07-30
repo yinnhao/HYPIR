@@ -4,7 +4,7 @@
 
 ## HYPIR: Harnessing Diffusion-Yielded Score Priors for Image Restoration
 
-Paper (coming soon) | Project Page (coming soon)
+[Paper](https://arxiv.org/abs/2507.20590) | [Project Page](https://hypir.xpixel.group/) | [Project Page (CN)](https://hypirzh.xpixel.group/)
 
 ![visitors](https://visitor-badge.laobi.icu/badge?page_id=XPixelGroup/HYPIR) [![Try a demo on Replicate](https://replicate.com/0x3f3f3f3fun/hypir-sd2/badge)](https://replicate.com/0x3f3f3f3fun/hypir-sd2) [![Open in OpenXLab](https://cdn-static.openxlab.org.cn/app-center/openxlab_app.svg)](https://openxlab.org.cn/apps/detail/linxinqi/HYPIR-SD2) [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1MbpICKc22S6ysD32uj3ORkqg6AgZrNpx?usp=sharing)
 
@@ -31,9 +31,14 @@ Xinqi Lin<sup>1,2</sup>, [Fanghua Yu](https://github.com/Fanghua-Yu)<sup>1</sup>
 
 ## <a name="next"></a>:soon:What's Next
 
-Our current open-source version is based on the Stable Diffusion 2.1. While the number of parameters is small, this model was trained on our best-quality data and with significant computational resources (batch size 1024). Therefore, its performance is also quite good.
+**Our current open-source version** is based on the Stable Diffusion 2.1. While the number of parameters is small, this model was trained on our best-quality data and with significant computational resources (batch size 1024). Therefore, its performance is also quite good.
 
-We'll provide access to more advanced models based on **FLUX** and **Stable Diffusion 3.5** through web interfaces and APIs in the future. Stay tuned!✨
+~~We'll provide access to more advanced models based on **FLUX** and **Stable Diffusion 3.5** through web interfaces and APIs in the future. Stay tuned!✨~~
+
+**Our most advanced model** has been launched on [suppixel.ai](https://supir.suppixel.ai/home) and [suppixel.cn](https://www.suppixel.cn/home)! We welcome you to experience it.🔥🔥🔥 This state-of-the-art model offers **more stable results**, **more flexible capabilities**, while still maintaining **incredibly fast speeds**🔥🔥🔥.
+
+Also, be aware that **pirated HYPIR websites**⚠️⚠️⚠️ are now active. Please verify the legitimacy of any site to prevent financial loss. The following website is illegally using our project:
+- https://www.hypir.org/
 
 ## <a name="update"></a>:new:Update
 
