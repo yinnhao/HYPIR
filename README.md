@@ -27,6 +27,7 @@ Xinqi Lin<sup>1,2</sup>, [Fanghua Yu](https://github.com/Fanghua-Yu)<sup>1</sup>
 - [Installation](#installation)
 - [Pretrained Models](#pretrained_models)
 - [Quick Start](#quick_start)
+- [Inference](#inference)
 - [Train](#train)
 
 ## <a name="next"></a>:soon:What's Next
@@ -91,6 +92,35 @@ pip install -r requirements.txt
 <div align="center">
     <kbd><img src="assets/gradio.png"></img></kbd>
 </div>
+
+## <a name="inference"></a>:crossed_swords:Inference
+
+More details can be found by running `python test.py --help`.
+
+```shell
+LORA_MODULES_LIST=(to_k to_q to_v to_out.0 conv conv1 conv2 conv_shortcut conv_out proj_in proj_out ff.net.2 ff.net.0.proj)
+IFS=','
+LORA_MODULES="${LORA_MODULES_LIST[*]}"
+unset IFS
+
+python test.py \
+--base_model_type sd2 \
+--base_model_path stabilityai/stable-diffusion-2-1-base \
+--model_t 200 \
+--coeff_t 200 \
+--lora_rank 256 \
+--lora_modules $LORA_MODULES \
+--weight_path path/to/HYPIR_sd2.pth \
+--patch_size 512 \
+--stride 256 \
+--lq_dir examples/lq \
+--scale_by factor \
+--upscale 4 \
+--txt_dir examples/prompt \
+--output_dir results/examples \
+--seed 231 \
+--device cuda
+```
 
 ## <a name="train"></a>:stars:Train
 

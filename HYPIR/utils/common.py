@@ -200,7 +200,7 @@ def make_tiled_fn(
         indices = sliding_windows(h, w, size, stride)
         pbar_desc = f"[{desc}]: Tiled Processing" if desc else "Tiled Processing"
         pbar = tqdm(
-            indices, desc=pbar_desc, disable=not progress, leave=False
+            indices, desc=pbar_desc, disable=not progress
         )
         for hi, hi_end, wi, wi_end in pbar:
             x_tile = x[..., hi:hi_end, wi:wi_end]

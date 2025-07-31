@@ -68,7 +68,9 @@ class BaseEnhancer:
         self,
         lq: torch.Tensor,
         prompt: str,
+        scale_by: Literal["factor", "longest_side"] = "factor",
         upscale: int = 1,
+        target_longest_side: int | None = None,
         patch_size: int = 512,
         stride: int = 256,
         return_type: Literal["pt", "np", "pil"] = "pt",
@@ -82,7 +84,21 @@ class BaseEnhancer:
 
         # Prepare low-quality inputs
         bs = len(lq)
-        lq = F.interpolate(lq, scale_factor=upscale, mode="bicubic")
+        if scale_by == "factor":
+            lq = F.interpolate(lq, scale_factor=upscale, mode="bicubic")
+        elif scale_by == "longest_side":
+            if target_longest_side is None:
+                raise ValueError("target_longest_side must be specified when scale_by is 'longest_side'.")
+            h, w = lq.shape[2:]
+            if h >= w:
+                new_h = target_longest_side
+                new_w = int(w * (target_longest_side / h))
+            else:
+                new_w = target_longest_side
+                new_h = int(h * (target_longest_side / w))
+            lq = F.interpolate(lq, size=(new_h, new_w), mode="bicubic")
+        else:
+            raise ValueError(f"Unsupported scale_by method: {scale_by}")
         ref = lq
         h0, w0 = lq.shape[2:]
         if min(h0, w0) <= patch_size:
