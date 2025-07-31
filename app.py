@@ -70,6 +70,8 @@ def process(
     image,
     prompt,
     upscale,
+    patch_size,
+    stride,
     seed,
     progress=gr.Progress(track_tqdm=True),
 ):
@@ -99,6 +101,8 @@ def process(
             lq=image_tensor,
             prompt=prompt,
             upscale=upscale,
+            patch_size=patch_size,
+            stride=stride,
             return_type="pil",
         )[0]
     except Exception as e:
@@ -127,6 +131,8 @@ with block:
                 if args.gpt_caption else "Prompt"
             ))
             upscale = gr.Slider(minimum=1, maximum=8, value=1, label="Upscale Factor", step=1)
+            patch_size = gr.Slider(minimum=512, maximum=1024, value=512, label="Patch Size", step=128)
+            stride = gr.Slider(minimum=256, maximum=1024, value=256, label="Patch Stride", step=128)
             seed = gr.Number(label="Seed", value=-1)
             run = gr.Button(value="Run")
         with gr.Column():
@@ -134,7 +140,7 @@ with block:
             status = gr.Textbox(label="status", interactive=False)
         run.click(
             fn=process,
-            inputs=[image, prompt, upscale, seed],
+            inputs=[image, prompt, upscale, patch_size, stride, seed],
             outputs=[result, status],
         )
 block.launch(server_name="0.0.0.0" if not args.local else "127.0.0.1", server_port=args.port)

@@ -69,9 +69,16 @@ class BaseEnhancer:
         lq: torch.Tensor,
         prompt: str,
         upscale: int = 1,
+        patch_size: int = 512,
+        stride: int = 256,
         return_type: Literal["pt", "np", "pil"] = "pt",
     ) -> torch.Tensor | np.ndarray | List[Image.Image]:
-        patch_size = 512
+        if stride <= 0:
+            raise ValueError("Stride must be greater than 0.")
+        if patch_size <= 0:
+            raise ValueError("Patch size must be greater than 0.")
+        if patch_size < stride:
+            raise ValueError("Patch size must be greater than or equal to stride.")
 
         # Prepare low-quality inputs
         bs = len(lq)
@@ -103,7 +110,7 @@ class BaseEnhancer:
         z = make_tiled_fn(
             fn=lambda z_lq_tile: self.forward_generator(z_lq_tile),
             size=patch_size // vae_scale_factor,
-            stride=patch_size // 2 // vae_scale_factor,
+            stride=stride // vae_scale_factor,
             progress=True,
             desc="Generator Forward",
         )(z_lq)
