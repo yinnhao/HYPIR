@@ -20,9 +20,10 @@ Xinqi Lin<sup>1,2</sup>, [Fanghua Yu](https://github.com/Fanghua-Yu)<sup>1</sup>
 
 :star:If HYPIR is helpful for you, please help star this repo. Thanks!:hugs:
 
-## :book:Table Of Contents
+## :book:Contents
 
 - [What's Next](#next)
+- [Gallery](#gallery)
 - [Update](#update)
 - [Installation](#installation)
 - [Pretrained Models](#pretrained_models)
@@ -32,7 +33,7 @@ Xinqi Lin<sup>1,2</sup>, [Fanghua Yu](https://github.com/Fanghua-Yu)<sup>1</sup>
 
 ## <a name="next"></a>:soon:What's Next
 
-**Our current open-source version** is based on the Stable Diffusion 2.1. While the number of parameters is small, this model was trained on our best-quality data and with significant computational resources (batch size 1024). Therefore, its performance is also quite good.
+**Our current open-source version** is based on the Stable Diffusion 2.1. While the number of parameters is small, this model was trained on our best-quality data and with significant computational resources (batch size 1024). Therefore, its performance is also quite good. Some examples [here](#gallery).
 
 ~~We'll provide access to more advanced models based on **FLUX** and **Stable Diffusion 3.5** through web interfaces and APIs in the future. Stay tuned!✨~~
 
@@ -40,6 +41,31 @@ Xinqi Lin<sup>1,2</sup>, [Fanghua Yu](https://github.com/Fanghua-Yu)<sup>1</sup>
 
 Also, be aware that **pirated HYPIR websites**⚠️⚠️⚠️ are now active. Please verify the legitimacy of any site to prevent financial loss. The following website is illegally using our project:
 - https://www.hypir.org/
+
+## <a name="gallery"></a>:eyes:Gallery
+
+The following cases were upscaled by HYPIR-SD2. All resolutions are above 2k.
+
+<table >
+  <tbody>
+    <tr>
+      <td><a href="https://imgsli.com/NDAzMjA5"><img src="assets/gallery_sd2/Avatar.jpg" style="border-radius: 8px;"/></a></td>
+      <td><a href="https://imgsli.com/NDAzMjEx"><img src="assets/gallery_sd2/The_Matrix.jpg" width="90%" style="border-radius: 8px;"/></a></td>
+    </tr>
+    <tr>
+      <td><a href="https://imgsli.com/NDAzMjE0"><img src="assets/gallery_sd2/The_Lord_of_the Rings.jpg" width="100%" style="border-radius: 8px;"/></a><br><a href="https://imgsli.com/NDAzMjI1"><img src="assets/gallery_sd2/Coco.jpg" width="100%" style="border-radius: 8px;"/></a></td>
+      <td><a href="https://imgsli.com/NDAzMjE4"><img src="assets/gallery_sd2/Forrest_Gump.jpg" width="72%" style="border-radius: 8px;"/></a></td>
+    </tr>
+    <tr>
+      <td><a href="https://imgsli.com/NDAzMjIz" style="border-radius: 8px;"><img src="assets/gallery_sd2/Dragon_Ball.jpg" style="border-radius: 8px;"/></a></td>
+      <td><a href="https://imgsli.com/NDAzMjI3"><img src="assets/gallery_sd2/Uproar_in_Heaven.jpg" style="border-radius: 8px;"/></a></td>
+    </tr>
+    <tr>
+      <td><a href="https://imgsli.com/NDAzMjI0"><img src="assets/gallery_sd2/Spirited_Away.jpg" style="border-radius: 8px;"/></a></td>
+      <td><a href="https://imgsli.com/NDAzMjI5"><img src="assets/gallery_sd2/Calabash_Brothers.jpg" style="border-radius: 8px;"/></a></td>
+    </tr>
+  </tbody>
+</table>
 
 ## <a name="update"></a>:new:Update
 
