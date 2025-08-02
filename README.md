@@ -46,19 +46,19 @@ The following cases were upscaled by HYPIR-SD2. All resolutions are above 2k.
 
 <table >
   <tbody>
-    <tr>
+    <tr align="center">
       <td><a href="https://imgsli.com/NDAzMjA5"><img src="assets/gallery_sd2/Avatar.jpg"/></a></td>
       <td><a href="https://imgsli.com/NDAzMjEx"><img src="assets/gallery_sd2/The_Matrix.jpg" width="90%"/></a></td>
     </tr>
-    <tr>
+    <tr align="center">
       <td><a href="https://imgsli.com/NDAzMjE0"><img src="assets/gallery_sd2/The_Lord_of_the Rings.jpg" width="100%"/></a><br><a href="https://imgsli.com/NDAzMjI1"><img src="assets/gallery_sd2/Coco.jpg" width="100%"/></a></td>
       <td><a href="https://imgsli.com/NDAzMjE4"><img src="assets/gallery_sd2/Forrest_Gump.jpg" width="72%"/></a></td>
     </tr>
-    <tr>
+    <tr align="center">
       <td><a href="https://imgsli.com/NDAzMjIz"><img src="assets/gallery_sd2/Dragon_Ball.jpg"/></a></td>
       <td><a href="https://imgsli.com/NDAzMjI3"><img src="assets/gallery_sd2/Uproar_in_Heaven.jpg"/></a></td>
     </tr>
-    <tr>
+    <tr align="center">
       <td><a href="https://imgsli.com/NDAzMjI0"><img src="assets/gallery_sd2/Spirited_Away.jpg"/></a></td>
       <td><a href="https://imgsli.com/NDAzMjI5"><img src="assets/gallery_sd2/Calabash_Brothers.jpg"/></a></td>
     </tr>
