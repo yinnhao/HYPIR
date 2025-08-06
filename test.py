@@ -31,6 +31,15 @@ def parse_args():
                         help="Size of the patches to process.")
     parser.add_argument("--stride", type=int, default=256,
                         help="Stride for the patches.")
+    # 新增优化参数
+    parser.add_argument("--vae_batch_size", type=int, default=4,
+                        help="Batch size for VAE decoder processing.")
+    parser.add_argument("--enable_fast_vae", action="store_true",
+                        help="Enable fast VAE decoder mode.")
+    parser.add_argument("--generator_batch_size", type=int, default=2,
+                        help="Batch size for generator forward processing.")
+    parser.add_argument("--enable_amp", action="store_true",
+                        help="Enable automatic mixed precision.")
     parser.add_argument("--lq_dir", type=str, required=True,
                         help="Directory containing low-quality images. Support nested directories.")
     parser.add_argument("--scale_by", type=str, default="factor", choices=["factor", "longest_side"],
@@ -76,6 +85,11 @@ if __name__ == "__main__":
             model_t=args.model_t,
             coeff_t=args.coeff_t,
             device=args.device,
+            # 新增优化参数
+            vae_batch_size=args.vae_batch_size,
+            enable_fast_vae=args.enable_fast_vae,
+            generator_batch_size=args.generator_batch_size,
+            enable_amp=args.enable_amp,
         )
         print("Start loading models")
         load_start = time()
@@ -133,6 +147,7 @@ if __name__ == "__main__":
             fp.write(prompt)
         print(f"Prompt: \033[94m{prompt}\033[0m")
 
+        # 在处理图像时使用优化参数
         result = model.enhance(
             lq=lq_tensor,
             prompt=prompt,
@@ -142,6 +157,9 @@ if __name__ == "__main__":
             patch_size=args.patch_size,
             stride=args.stride,
             return_type="pil",
+            # 传递优化参数
+            vae_batch_size=args.vae_batch_size,
+            generator_batch_size=args.generator_batch_size,
         )[0]
         result.save(result_path)
     print(f"Done. \033[92mEnjoy your results in {result_dir}.\033[0m")

@@ -8,6 +8,8 @@ def enable_tiled_vae(
     is_decoder,
     tile_size=256,
     dtype=None,
+    fast_decoder=False,  # 新增参数
+    fast_encoder=False,  # 新增参数
 ):
     if not is_decoder:
         original_forward = vae.encoder.forward
@@ -21,8 +23,8 @@ def enable_tiled_vae(
         model,
         tile_size,
         is_decoder=is_decoder,
-        fast_decoder=False,
-        fast_encoder=False,
+        fast_decoder=fast_decoder,  # 启用快速解码
+        fast_encoder=fast_encoder,  # 启用快速编码
         color_fix=False,
         to_gpu=False,
         dtype=dtype,

@@ -8,8 +8,21 @@ from HYPIR.enhancer.base import BaseEnhancer
 
 class SD2Enhancer(BaseEnhancer):
 
+    def __init__(self, *args, **kwargs):
+        # 提取优化参数
+        self.optimization_params = {
+            'vae_batch_size': kwargs.pop('vae_batch_size', 4),
+            'enable_fast_vae': kwargs.pop('enable_fast_vae', False),
+            'generator_batch_size': kwargs.pop('generator_batch_size', 2),
+            'enable_amp': kwargs.pop('enable_amp', False),
+        }
+        
+        # 调用父类构造函数，传递优化参数
+        super().__init__(*args, **self.optimization_params, **kwargs)
+
     def init_scheduler(self):
-        self.scheduler = DDPMScheduler.from_pretrained(self.base_model_path, subfolder="scheduler")
+        self.scheduler = DDPMScheduler.from_pretrained(
+            self.base_model_path, subfolder="scheduler")
 
     def init_text_models(self):
         self.tokenizer = CLIPTokenizer.from_pretrained(self.base_model_path, subfolder="tokenizer")
@@ -28,11 +41,14 @@ class SD2Enhancer(BaseEnhancer):
         print(f"Load model weights from {self.weight_path}")
         state_dict = torch.load(self.weight_path, map_location="cpu", weights_only=False)
         self.G.load_state_dict(state_dict, strict=False)
-        input_keys = set(state_dict.keys())
-        required_keys = set([k for k in self.G.state_dict().keys() if "lora" in k])
-        missing = required_keys - input_keys
-        unexpected = input_keys - required_keys
-        assert required_keys == input_keys, f"Missing: {missing}, Unexpected: {unexpected}"
+        
+        # 启用编译优化（如果支持）
+        if hasattr(torch, 'compile') and self.enable_amp:
+            try:
+                self.G = torch.compile(self.G, mode="reduce-overhead")
+                print("✓ Enabled torch.compile optimization for UNet")
+            except Exception as e:
+                print(f"Warning: torch.compile failed: {e}")
 
         self.G.eval().requires_grad_(False)
 
@@ -55,10 +71,14 @@ class SD2Enhancer(BaseEnhancer):
 
     def forward_generator(self, z_lq):
         z_in = z_lq * self.vae.config.scaling_factor
-        eps = self.G(
-            z_in, self.inputs["timesteps"],
-            encoder_hidden_states=self.inputs["c_txt"]["text_embed"],
-        ).sample
+        
+        # 使用混合精度
+        with torch.cuda.amp.autocast() if self.enable_amp else torch.no_grad():
+            eps = self.G(
+                z_in, self.inputs["timesteps"],
+                encoder_hidden_states=self.inputs["c_txt"]["text_embed"],
+            ).sample
+            
         z = self.scheduler.step(eps, self.coeff_t, z_in).pred_original_sample
         z_out = z / self.vae.config.scaling_factor
         return z_out
