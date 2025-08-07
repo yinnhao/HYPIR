@@ -435,11 +435,11 @@ class BaseEnhancer:
             
             # 调整权重大小
             current_weights = F.interpolate(
-                gaussian_weights.unsqueeze(0), 
+                gaussian_weights.unsqueeze(0).unsqueeze(0),  # 添加两个维度：(1, 1, H, W)
                 size=(patch_h, patch_w), 
                 mode='bilinear', 
                 align_corners=False
-            ).squeeze(0)
+            ).squeeze(0).squeeze(0)  # 移除两个维度：(H, W)
             
             # 累加patch和权重
             reconstructed[:, :, lh_start:lh_end, lw_start:lw_end] += patch * current_weights
