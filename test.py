@@ -34,8 +34,12 @@ def parse_args():
     # 新增优化参数
     parser.add_argument("--vae_batch_size", type=int, default=4,
                         help="Batch size for VAE decoder processing.")
+    parser.add_argument("--encoder_batch_size", type=int, default=8,
+                        help="Batch size for VAE encoder processing.")
     parser.add_argument("--enable_fast_vae", action="store_true",
                         help="Enable fast VAE decoder mode.")
+    parser.add_argument("--enable_parallel_encode", action="store_true", default=True,
+                        help="Enable parallel VAE encoding.")
     parser.add_argument("--generator_batch_size", type=int, default=2,
                         help="Batch size for generator forward processing.")
     parser.add_argument("--enable_amp", action="store_true",
@@ -85,9 +89,11 @@ if __name__ == "__main__":
             model_t=args.model_t,
             coeff_t=args.coeff_t,
             device=args.device,
-            # 新增优化参数
+            # 所有优化参数
             vae_batch_size=args.vae_batch_size,
+            encoder_batch_size=args.encoder_batch_size,
             enable_fast_vae=args.enable_fast_vae,
+            enable_parallel_encode=args.enable_parallel_encode,
             generator_batch_size=args.generator_batch_size,
             enable_amp=args.enable_amp,
         )
