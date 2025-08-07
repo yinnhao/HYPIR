@@ -9,12 +9,14 @@ from HYPIR.enhancer.base import BaseEnhancer
 class SD2Enhancer(BaseEnhancer):
 
     def __init__(self, *args, **kwargs):
-        # 提取优化参数
+        # 提取所有优化参数
         self.optimization_params = {
             'vae_batch_size': kwargs.pop('vae_batch_size', 4),
             'enable_fast_vae': kwargs.pop('enable_fast_vae', False),
             'generator_batch_size': kwargs.pop('generator_batch_size', 2),
             'enable_amp': kwargs.pop('enable_amp', False),
+            'encoder_batch_size': kwargs.pop('encoder_batch_size', 8),  # 新增
+            'enable_parallel_encode': kwargs.pop('enable_parallel_encode', True),  # 新增
         }
         
         # 调用父类构造函数，传递优化参数
