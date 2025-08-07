@@ -139,31 +139,25 @@ class BaseEnhancer:
         if min(h0, w0) <= patch_size:
             lq = self.resize_at_least(lq, size=patch_size)
 
-        # VAE encoding with optimizations
-        lq = (lq * 2 - 1).to(dtype=self.weight_dtype, device=self.device)
-        h1, w1 = lq.shape[2:]
-        
-        # Pad vae input size to multiples of vae_scale_factor
-        vae_scale_factor = 8
-        ph = (h1 + vae_scale_factor - 1) // vae_scale_factor * vae_scale_factor - h1
-        pw = (w1 + vae_scale_factor - 1) // vae_scale_factor * vae_scale_factor - w1
-        lq = F.pad(lq, (0, pw, 0, ph), mode="constant", value=0)
-        
-        # Optimized VAE encoding
+        # Optimized VAE encoding with batching
         with enable_tiled_vae(
             self.vae,
             is_decoder=False,
             tile_size=patch_size,
             dtype=self.weight_dtype,
+            fast_encoder=self.enable_fast_vae,  # 启用快速编码
         ):
-            z_lq = self.vae.encode(lq.to(self.weight_dtype)).latent_dist.sample()
+            if vae_batch_size > 1:
+                z_lq = self.batched_vae_encode(lq, vae_batch_size)
+            else:
+                z_lq = self.vae.encode(lq.to(self.weight_dtype)).latent_dist.sample()
 
         # Optimized Generator forward with batching
         self.prepare_inputs(batch_size=bs, prompt=prompt)
         z = self.make_batched_tiled_fn(
             fn=lambda z_batch: self.forward_generator_batch(z_batch),
-            size=patch_size // vae_scale_factor,
-            stride=stride // vae_scale_factor,
+            size=patch_size // 8, # vae_scale_factor is 8
+            stride=stride // 8, # vae_scale_factor is 8
             batch_size=generator_batch_size,
             progress=True,
             desc="Generator Forward (Batched)",
@@ -173,7 +167,7 @@ class BaseEnhancer:
         with enable_tiled_vae(
             self.vae,
             is_decoder=True,
-            tile_size=patch_size // vae_scale_factor,
+            tile_size=patch_size // 8, # vae_scale_factor is 8
             dtype=self.weight_dtype,
             fast_decoder=self.enable_fast_vae,  # 启用快速解码
         ):
@@ -303,6 +297,24 @@ class BaseEnhancer:
             return out
 
         return batched_tiled_fn
+
+    def batched_vae_encode(self, lq: torch.Tensor, batch_size: int) -> torch.Tensor:
+        """批量VAE编码以提高效率"""
+        B, C, H, W = lq.shape
+        
+        if B <= batch_size:
+            # 如果批次已经足够小，直接编码
+            return self.vae.encode(lq.to(self.weight_dtype)).latent_dist.sample()
+        
+        # 分批处理
+        encoded_chunks = []
+        for i in range(0, B, batch_size):
+            chunk = lq[i:i+batch_size]
+            with torch.cuda.amp.autocast() if self.enable_amp else torch.no_grad():
+                encoded_chunk = self.vae.encode(chunk.to(self.weight_dtype)).latent_dist.sample()
+            encoded_chunks.append(encoded_chunk)
+        
+        return torch.cat(encoded_chunks, dim=0)
 
     @staticmethod
     def tensor2image(img_tensor):

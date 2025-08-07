@@ -10,15 +10,20 @@ class SD2Enhancer(BaseEnhancer):
 
     def __init__(self, *args, **kwargs):
         # 提取优化参数
-        self.optimization_params = {
-            'vae_batch_size': kwargs.pop('vae_batch_size', 4),
-            'enable_fast_vae': kwargs.pop('enable_fast_vae', False),
-            'generator_batch_size': kwargs.pop('generator_batch_size', 2),
-            'enable_amp': kwargs.pop('enable_amp', False),
-        }
+        vae_batch_size = kwargs.pop('vae_batch_size', 4)
+        enable_fast_vae = kwargs.pop('enable_fast_vae', False)
+        generator_batch_size = kwargs.pop('generator_batch_size', 2)
+        enable_amp = kwargs.pop('enable_amp', False)
         
         # 调用父类构造函数，传递优化参数
-        super().__init__(*args, **self.optimization_params, **kwargs)
+        super().__init__(
+            *args, 
+            vae_batch_size=vae_batch_size,
+            enable_fast_vae=enable_fast_vae,
+            generator_batch_size=generator_batch_size,
+            enable_amp=enable_amp,
+            **kwargs
+        )
 
     def init_scheduler(self):
         self.scheduler = DDPMScheduler.from_pretrained(
