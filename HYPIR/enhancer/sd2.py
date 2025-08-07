@@ -74,10 +74,13 @@ class SD2Enhancer(BaseEnhancer):
     def forward_generator(self, z_lq):
         z_in = z_lq * self.vae.config.scaling_factor
         
+        # 确保timesteps的数据类型与模型权重一致
+        timesteps = self.inputs["timesteps"].to(dtype=self.weight_dtype)
+        
         # 使用混合精度
         with torch.cuda.amp.autocast() if self.enable_amp else torch.no_grad():
             eps = self.G(
-                z_in, self.inputs["timesteps"],
+                z_in, timesteps,
                 encoder_hidden_states=self.inputs["c_txt"]["text_embed"],
             ).sample
             
