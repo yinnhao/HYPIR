@@ -167,7 +167,7 @@ class BaseEnhancer:
                 dtype=self.weight_dtype,
                 fast_encoder=self.enable_fast_vae,  # 启用快速编码
             ):
-                z_lq = self.vae.encode(lq.to(self.weight_dtype)).latent_dist.sample()
+                z_lq = self.vae.encode(lq.to(self.weight_dtype)).latent_dist.sample().to(self.weight_dtype)
 
         # Optimized Generator forward with batching
         self.prepare_inputs(batch_size=bs, prompt=prompt)
@@ -325,7 +325,7 @@ class BaseEnhancer:
         
         # 如果图像较小，直接编码
         if max(H, W) <= patch_size:
-            return self.vae.encode(lq).latent_dist.sample()
+            return self.vae.encode(lq).latent_dist.sample().to(self.weight_dtype)
         
         # 计算padding以确保完美重建
         pad = 32  # VAE encoder需要的padding
@@ -388,7 +388,7 @@ class BaseEnhancer:
             
             # 批量编码
             with torch.cuda.amp.autocast() if self.enable_amp else torch.no_grad():
-                encoded_batch = self.vae.encode(batch_input.to(self.weight_dtype)).latent_dist.sample()
+                encoded_batch = self.vae.encode(batch_input.to(self.weight_dtype)).latent_dist.sample().to(self.weight_dtype)
             
             # 分离batch结果
             if len(batch_patches) == 1:
