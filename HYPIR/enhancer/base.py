@@ -156,10 +156,8 @@ class BaseEnhancer:
             dtype=self.weight_dtype,
             fast_encoder=self.enable_fast_vae,  # 启用快速编码
         ):
-            if vae_batch_size > 1:
-                z_lq = self.batched_vae_encode(lq, vae_batch_size)
-            else:
-                z_lq = self.vae.encode(lq.to(self.weight_dtype)).latent_dist.sample()
+            # 简化处理，避免与tiled VAE冲突
+            z_lq = self.vae.encode(lq.to(self.weight_dtype)).latent_dist.sample()
 
         # Optimized Generator forward with batching
         self.prepare_inputs(batch_size=bs, prompt=prompt)
