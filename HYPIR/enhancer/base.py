@@ -139,6 +139,15 @@ class BaseEnhancer:
         if min(h0, w0) <= patch_size:
             lq = self.resize_at_least(lq, size=patch_size)
 
+        # 获取当前图像尺寸
+        h1, w1 = lq.shape[2:]
+        
+        # Pad vae input size to multiples of vae_scale_factor
+        vae_scale_factor = 8
+        ph = (h1 + vae_scale_factor - 1) // vae_scale_factor * vae_scale_factor - h1
+        pw = (w1 + vae_scale_factor - 1) // vae_scale_factor * vae_scale_factor - w1
+        lq = F.pad(lq, (0, pw, 0, ph), mode="constant", value=0)
+
         # Optimized VAE encoding with batching
         with enable_tiled_vae(
             self.vae,
