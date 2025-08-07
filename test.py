@@ -146,7 +146,7 @@ if __name__ == "__main__":
         with open(prompt_path, "w") as fp:
             fp.write(prompt)
         print(f"Prompt: \033[94m{prompt}\033[0m")
-
+        start = time()
         # 在处理图像时使用优化参数
         result = model.enhance(
             lq=lq_tensor,
@@ -161,5 +161,7 @@ if __name__ == "__main__":
             vae_batch_size=args.vae_batch_size,
             generator_batch_size=args.generator_batch_size,
         )[0]
+        end = time()
+        print("infer time:", end - start)
         result.save(result_path)
     print(f"Done. \033[92mEnjoy your results in {result_dir}.\033[0m")
