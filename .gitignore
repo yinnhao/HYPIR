@@ -13,3 +13,4 @@ __pycache__
 /results
 result
 model_pth
+test_set_sr

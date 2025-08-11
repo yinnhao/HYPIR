@@ -124,8 +124,9 @@ if __name__ == "__main__":
 
     to_tensor = transforms.ToTensor()
 
-    result_dir = output_dir / "result"
+    result_dir = output_dir / "result_origin"
     prompt_dir = output_dir / "prompt"
+    time_cost_list = []
     for file_path in images:
         print(f"Process file: \033[92m{os.path.basename(file_path)}\033[0m")
 
@@ -163,5 +164,7 @@ if __name__ == "__main__":
         )[0]
         end = time()
         print("infer time:", end - start)
+        time_cost_list.append(end - start)
         result.save(result_path)
+    print("aver time: ", sum(time_cost_list[1:]) / (len(time_cost_list) - 1))
     print(f"Done. \033[92mEnjoy your results in {result_dir}.\033[0m")
