@@ -460,7 +460,23 @@ def custom_group_norm(input, num_groups, mean, var, weight=None, bias=None, eps=
     input_reshaped = input.contiguous().view(
         1, int(b * num_groups), channel_in_group, *input.size()[2:])
 
-    out = F.batch_norm(input_reshaped, mean, var, weight=None, bias=None,
+    # Adapt running stats size: accept stats for one sample (num_groups) or full batch (b*num_groups)
+    run_mean = mean
+    run_var = var
+    if run_mean.dim() != 1:
+        run_mean = run_mean.reshape(-1)
+    if run_var.dim() != 1:
+        run_var = run_var.reshape(-1)
+    expected_c = int(b * num_groups)
+    if run_mean.shape[0] == num_groups:
+        run_mean = run_mean.repeat(b)
+        run_var = run_var.repeat(b)
+    elif run_mean.shape[0] != expected_c:
+        raise RuntimeError(f"custom_group_norm: running_mean size {run_mean.shape[0]} incompatible with expected {expected_c}")
+    run_mean = run_mean.to(input_reshaped.dtype).to(input_reshaped.device)
+    run_var = run_var.to(input_reshaped.dtype).to(input_reshaped.device)
+
+    out = F.batch_norm(input_reshaped, run_mean, run_var, weight=None, bias=None,
                        training=False, momentum=0, eps=eps)
 
     out = out.view(b, c, *input.size()[2:])
