@@ -367,6 +367,67 @@ def clone_task_queue(task_queue):
     return [[item for item in task] for task in task_queue]
 
 
+def split_into_micro_stages(task_queue):
+    """
+    在每个 'pre_norm'（或 'apply_norm'）处分段，生成多个微阶段。
+    保持算子顺序，仅在 Norm 前后切段；down/upsample、conv_out、tanh 也强制切段。
+    返回：List[List[(name, fn_or_tensor)]]
+    """
+    stages = []
+    current = []
+    seen_norm_in_stage = False
+    for op in task_queue:
+        name = op[0]
+        if name in ('downsamplers', 'upsamplers', 'conv_out', 'tanh'):
+            current.append(op)
+            if current:
+                stages.append(current)
+            current = []
+            seen_norm_in_stage = False
+            continue
+
+        if name in ('pre_norm', 'apply_norm'):
+            if seen_norm_in_stage:
+                # 已经有一个 norm，先结束当前阶段，再把本 norm 放到新阶段开始
+                if current:
+                    stages.append(current)
+                current = [op]
+            else:
+                current.append(op)
+                seen_norm_in_stage = True
+            continue
+
+        # 其他普通算子/控制算子按序加入
+        current.append(op)
+
+    if current:
+        stages.append(current)
+    return stages
+
+
+def _run_simple_ops(x, ops):
+    for name, fn in ops:
+        if name in ('store_res', 'store_res_cpu', 'add_res', 'pre_norm', 'apply_norm'):
+            raise RuntimeError('control op should be handled outside of _run_simple_ops')
+        x = fn(x)
+    return x
+
+
+def get_post_ops_after_first_norm(ops):
+    """
+    返回首次出现 'pre_norm' 或 'apply_norm' 之后的剩余算子序列。
+    不包含该 norm 本身。
+    """
+    hit = False
+    post = []
+    for name, fn in ops:
+        if not hit and name in ('pre_norm', 'apply_norm'):
+            hit = True
+            continue
+        if hit:
+            post.append((name, fn))
+    return post
+
 def get_var_mean(input, num_groups, eps=1e-6):
     """
     Get mean and var for group norm
@@ -534,7 +595,8 @@ class GroupNormParam:
 
 
 class VAEHook:
-    def __init__(self, net, tile_size, is_decoder, fast_decoder, fast_encoder, color_fix, to_gpu=False, dtype=None):
+    def __init__(self, net, tile_size, is_decoder, fast_decoder, fast_encoder, color_fix, to_gpu=False, dtype=None,
+                 segmented_parallel: bool = False, cache_pre_norm: bool = False, micro_batch_size: int | None = None):
         self.net = net                  # encoder | decoder
         self.tile_size = tile_size
         self.is_decoder = is_decoder
@@ -544,6 +606,10 @@ class VAEHook:
         self.to_gpu = to_gpu
         self.pad = 11 if is_decoder else 32
         self.dtype = dtype
+        # segmented-parallel options
+        self.segmented_parallel = segmented_parallel
+        self.cache_pre_norm = cache_pre_norm
+        self.micro_batch_size = micro_batch_size
 
     def __call__(self, x):
         B, C, H, W = x.shape
@@ -749,7 +815,235 @@ class VAEHook:
         # Free memory of input latent tensor
         del z
 
-        # Task queue execution
+        # Segmented parallel: split by norm stages并分组等尺寸tile进行两段式并行
+        if self.segmented_parallel:
+            full_queue = single_task_queue
+            stages = split_into_micro_stages(full_queue)
+            use_cuda = torch.cuda.is_available() and device.type == 'cuda'
+            # choose micro-batch
+            if self.micro_batch_size is not None:
+                default_micro = max(1, min(self.micro_batch_size, num_tiles))
+            else:
+                default_micro = 4 if use_cuda else 1
+
+            # per-tile current features and residual queues
+            cur_feats = [t.cpu() for t in tiles]
+            residual_queues = [[] for _ in range(num_tiles)]
+            result = None
+            pre_norm_cache = None  # optional caching per stage
+
+            def group_by_shape(feats):
+                groups = {}
+                for idx, ft in enumerate(feats):
+                    if ft is None:
+                        continue
+                    key = (int(ft.shape[0]), int(ft.shape[2]), int(ft.shape[3]))
+                    groups.setdefault(key, []).append(idx)
+                return groups
+
+            def cat_batch(indices):
+                # assume same N,H,W per group
+                Ns = [cur_feats[i].shape[0] for i in indices]
+                if len(set(Ns)) != 1:
+                    return None, None, None
+                N0 = Ns[0]
+                xs = [cur_feats[i].to(device) for i in indices]
+                batch = torch.cat(xs, dim=0)  # [len(indices)*N0, C, H, W]
+                return batch, N0, indices
+
+            def split_batch(batch, N0, count):
+                # returns list of [N0,C,H,W]
+                outs = []
+                for k in range(count):
+                    outs.append(batch[k*N0:(k+1)*N0])
+                return outs
+
+            def stage_has_norm(ops):
+                for name, _ in ops:
+                    if name in ('pre_norm', 'apply_norm'):
+                        return True
+                return False
+
+            def run_until_norm(x, ops, indices, N0, local_res_q):
+                # returns pre_norm_input (batch) and norm layer
+                for name, fn in ops:
+                    if name in ('pre_norm', 'apply_norm'):
+                        return x, fn
+                    elif name in ('store_res', 'store_res_cpu'):
+                        res_batch = fn(x)
+                        parts = split_batch(res_batch, N0, len(indices))
+                        for j, idx in enumerate(indices):
+                            local_res_q[idx].append(parts[j].detach())
+                    elif name == 'add_res':
+                        # add from queues
+                        adds = []
+                        for idx in indices:
+                            adds.append(local_res_q[idx].pop(0).to(device))
+                        add_batch = torch.cat(adds, dim=0)
+                        x = x + add_batch
+                    else:
+                        x = fn(x)
+                return x, None
+
+            def run_full_with_norm(x, ops, indices, N0, norm_apply, last_stage):
+                applied = False
+                for name, fn in ops:
+                    if name in ('pre_norm', 'apply_norm'):
+                        x = norm_apply(x)
+                        applied = True
+                    elif name in ('store_res', 'store_res_cpu'):
+                        res_batch = fn(x)
+                        parts = split_batch(res_batch, N0, len(indices))
+                        for j, idx in enumerate(indices):
+                            residual_queues[idx].append(parts[j].detach())
+                    elif name == 'add_res':
+                        adds = []
+                        for idx in indices:
+                            adds.append(residual_queues[idx].pop(0).to(device))
+                        add_batch = torch.cat(adds, dim=0)
+                        x = x + add_batch
+                    else:
+                        x = fn(x)
+                assert applied, 'norm not applied in stage'
+                return x
+
+            def run_full_no_norm(x, ops, indices, N0):
+                for name, fn in ops:
+                    if name in ('store_res', 'store_res_cpu'):
+                        res_batch = fn(x)
+                        parts = split_batch(res_batch, N0, len(indices))
+                        for j, idx in enumerate(indices):
+                            residual_queues[idx].append(parts[j].detach())
+                    elif name == 'add_res':
+                        adds = []
+                        for idx in indices:
+                            adds.append(residual_queues[idx].pop(0).to(device))
+                        add_batch = torch.cat(adds, dim=0)
+                        x = x + add_batch
+                    elif name in ('pre_norm', 'apply_norm'):
+                        # should not happen
+                        pass
+                    else:
+                        x = fn(x)
+                return x
+
+            # process each stage
+            for s_idx, ops in enumerate(stages):
+                groups = group_by_shape(cur_feats)
+                if not groups:
+                    continue
+                has_norm = stage_has_norm(ops)
+                # optional cache of pre-norm inputs per tile for this stage
+                pre_norm_cache = [None for _ in range(num_tiles)] if (has_norm and self.cache_pre_norm) else None
+                # pass 1: collect stats if needed
+                if has_norm:
+                    grp_param = GroupNormParam()
+                    for key, idxs in groups.items():
+                        N0, H, W = key
+                        micro = min(default_micro, len(idxs))
+                        for start in range(0, len(idxs), micro):
+                            sub = idxs[start:start+micro]
+                            batch, N0k, sub_idx = cat_batch(sub)
+                            if batch is None:
+                                # fallback per-tile
+                                for ii in sub:
+                                    xb, _, _ = cat_batch([ii])
+                                    local_q = [[] for _ in range(num_tiles)]
+                                    pre, norm_layer = run_until_norm(xb, ops, [ii], cur_feats[ii].shape[0], local_q)
+                                    grp_param.add_tile(pre, norm_layer)
+                                    if pre_norm_cache is not None:
+                                        pre_norm_cache[ii] = pre.detach().cpu()
+                                continue
+                            local_q = [[] for _ in range(num_tiles)]
+                            pre, norm_layer = run_until_norm(batch, ops, sub_idx, N0k, local_q)
+                            # accumulate per tile
+                            parts = split_batch(pre, N0k, len(sub_idx))
+                            for j, ii in enumerate(sub_idx):
+                                grp_param.add_tile(parts[j], norm_layer)
+                                if pre_norm_cache is not None:
+                                    pre_norm_cache[ii] = parts[j].detach().cpu()
+                            del batch, pre
+                    norm_apply = grp_param.summary()
+
+                # pass 2: run stage
+                for key, idxs in groups.items():
+                    N0, H, W = key
+                    micro = min(default_micro, len(idxs))
+                    for start in range(0, len(idxs), micro):
+                        sub = idxs[start:start+micro]
+                        if has_norm and pre_norm_cache is not None:
+                            # build batch from cached pre-norm inputs (already on CPU)
+                            xs = [pre_norm_cache[ii].to(device) for ii in sub]
+                            batch = torch.cat(xs, dim=0)
+                            N0k = pre_norm_cache[sub[0]].shape[0]
+                            sub_idx = sub
+                        else:
+                            batch, N0k, sub_idx = cat_batch(sub)
+                        if batch is None:
+                            # fallback per-tile
+                            for ii in sub:
+                                xb, _, _ = cat_batch([ii])
+                                if has_norm:
+                                    if pre_norm_cache is not None:
+                                        xb = pre_norm_cache[ii].to(device)
+                                        # apply norm then run post ops only
+                                        xbn = norm_apply(xb)
+                                        # run post-only
+                                        post_only = []
+                                        hit = False
+                                        for name, fn in ops:
+                                            if not hit and name in ('pre_norm', 'apply_norm'):
+                                                hit = True
+                                                continue
+                                            if hit:
+                                                post_only.append((name, fn))
+                                        post = run_full_no_norm(xbn, post_only, [ii], xbn.shape[0])
+                                    else:
+                                        post = run_full_with_norm(xb, ops, [ii], cur_feats[ii].shape[0], norm_apply, s_idx == len(stages)-1)
+                                else:
+                                    post = run_full_no_norm(xb, ops, [ii], cur_feats[ii].shape[0])
+                                if s_idx == len(stages)-1:
+                                    out_tile = post
+                                    if result is None:
+                                        result = torch.zeros((N, out_tile.shape[1], height * 8 if is_decoder else height // 8, width * 8 if is_decoder else width // 8), device=device, requires_grad=False)
+                                    result[:, :, out_bboxes[ii][2]:out_bboxes[ii][3], out_bboxes[ii][0]:out_bboxes[ii][1]] = crop_valid_region(out_tile, in_bboxes[ii], out_bboxes[ii], is_decoder)
+                                else:
+                                    cur_feats[ii] = post.detach().cpu()
+                            continue
+
+                        if has_norm:
+                            if pre_norm_cache is not None:
+                                # apply norm then post-only
+                                bn = norm_apply(batch)
+                                post_only = []
+                                hit = False
+                                for name, fn in ops:
+                                    if not hit and name in ('pre_norm', 'apply_norm'):
+                                        hit = True
+                                        continue
+                                    if hit:
+                                        post_only.append((name, fn))
+                                post = run_full_no_norm(bn, post_only, sub_idx, N0k)
+                            else:
+                                post = run_full_with_norm(batch, ops, sub_idx, N0k, norm_apply, s_idx == len(stages)-1)
+                        else:
+                            post = run_full_no_norm(batch, ops, sub_idx, N0k)
+
+                        last_stage = (s_idx == len(stages) - 1)
+                        parts = split_batch(post, N0k, len(sub_idx))
+                        for j, ii in enumerate(sub_idx):
+                            out_tile = parts[j]
+                            if last_stage:
+                                if result is None:
+                                    result = torch.zeros((N, out_tile.shape[1], height * 8 if is_decoder else height // 8, width * 8 if is_decoder else width // 8), device=device, requires_grad=False)
+                                result[:, :, out_bboxes[ii][2]:out_bboxes[ii][3], out_bboxes[ii][0]:out_bboxes[ii][1]] = crop_valid_region(out_tile, in_bboxes[ii], out_bboxes[ii], is_decoder)
+                            else:
+                                cur_feats[ii] = out_tile.detach().cpu()
+                        del batch, post
+
+            return result if result is not None else torch.zeros(1, device=device)
+
+        # Task queue execution（原串行路径）
         pbar = tqdm(total=num_tiles * len(task_queues[0]), desc=f"[Tiled VAE]: Executing {'Decoder' if is_decoder else 'Encoder'} Task Queue: ")
 
         # execute the task back and forth when switch tiles so that we always

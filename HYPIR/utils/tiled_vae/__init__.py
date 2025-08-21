@@ -10,6 +10,9 @@ def enable_tiled_vae(
     dtype=None,
     fast_decoder=False,  # 新增参数
     fast_encoder=False,  # 新增参数
+    segmented_parallel=False,  # 分段并行（按 Norm 分段）
+    cache_pre_norm=False,      # 显存足够时：阶段内单遍（缓存 pre_norm 激活）
+    micro_batch_size=None,     # 分段并行微批大小
 ):
     if not is_decoder:
         original_forward = vae.encoder.forward
@@ -28,6 +31,9 @@ def enable_tiled_vae(
         color_fix=False,
         to_gpu=False,
         dtype=dtype,
+        segmented_parallel=segmented_parallel,
+        cache_pre_norm=cache_pre_norm,
+        micro_batch_size=micro_batch_size,
     )
 
     try:
