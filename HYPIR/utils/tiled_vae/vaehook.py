@@ -842,7 +842,7 @@ class VAEHook:
             else:
                 default_micro = 4 if use_cuda else 1
 
-            # per-tile current features and residual queues
+            # per-tile current features and residual queues (persist across stages)
             cur_feats = [t.cpu() for t in tiles]
             residual_queues = [[] for _ in range(num_tiles)]
             result = None
@@ -853,7 +853,7 @@ class VAEHook:
                 for idx, ft in enumerate(feats):
                     if ft is None:
                         continue
-                    key = (int(ft.shape[0]), int(ft.shape[2]), int(ft.shape[3]))
+                    key = (int(ft.shape[0]), int(ft.shape[1]), int(ft.shape[2]), int(ft.shape[3]))
                     groups.setdefault(key, []).append(idx)
                 return groups
 
@@ -863,7 +863,7 @@ class VAEHook:
                 if len(set(Ns)) != 1:
                     return None, None, None
                 N0 = Ns[0]
-                xs = [cur_feats[i].to(device) for i in indices]
+                xs = [cur_feats[i].contiguous().to(device) for i in indices]
                 batch = torch.cat(xs, dim=0)  # [len(indices)*N0, C, H, W]
                 return batch, N0, indices
 
@@ -880,11 +880,13 @@ class VAEHook:
                         return True
                 return False
 
-            def run_until_norm(x, ops, indices, N0, local_res_q):
-                # returns pre_norm_input (batch) and norm layer
+            def run_until_norm(x, ops, indices, N0):
+                # returns pre_norm_input (batch), norm layer, and per-tile residuals produced before norm
+                # use a local residual queue so that pass1 does not affect pass2
+                local_res_q = {idx: [] for idx in indices}
                 for name, fn in ops:
                     if name in ('pre_norm', 'apply_norm'):
-                        return x, fn
+                        return x, fn, local_res_q
                     elif name in ('store_res', 'store_res_cpu'):
                         res_batch = fn(x)
                         parts = split_batch(res_batch, N0, len(indices))
@@ -899,7 +901,7 @@ class VAEHook:
                         x = x + add_batch
                     else:
                         x = fn(x)
-                return x, None
+                return x, None, local_res_q
 
             def run_full_with_norm(x, ops, indices, N0, norm_apply, last_stage):
                 applied = False
@@ -951,11 +953,13 @@ class VAEHook:
                 has_norm = stage_has_norm(ops)
                 # optional cache of pre-norm inputs per tile for this stage
                 pre_norm_cache = [None for _ in range(num_tiles)] if (has_norm and self.cache_pre_norm) else None
+                # cache of pre-norm residuals per tile (only meaningful when caching pre-norm inputs)
+                pending_store_res = [[] for _ in range(num_tiles)] if pre_norm_cache is not None else None
                 # pass 1: collect stats if needed
                 if has_norm:
                     grp_param = GroupNormParam()
                     for key, idxs in groups.items():
-                        N0, H, W = key
+                        N0, Ck, H, W = key
                         micro = min(default_micro, len(idxs))
                         for start in range(0, len(idxs), micro):
                             sub = idxs[start:start+micro]
@@ -964,26 +968,36 @@ class VAEHook:
                                 # fallback per-tile
                                 for ii in sub:
                                     xb, _, _ = cat_batch([ii])
-                                    local_q = [[] for _ in range(num_tiles)]
-                                    pre, norm_layer = run_until_norm(xb, ops, [ii], cur_feats[ii].shape[0], local_q)
+                                    pre, norm_layer, local_q = run_until_norm(xb, ops, [ii], cur_feats[ii].shape[0])
                                     grp_param.add_tile(pre, norm_layer)
                                     if pre_norm_cache is not None:
-                                        pre_norm_cache[ii] = pre.detach().cpu()
+                                        pre_norm_cache[ii] = pre.detach()
+                                        # store residuals generated before norm
+                                        if pending_store_res is not None:
+                                            pending_store_res[ii].extend(local_q[ii])
                                 continue
-                            local_q = [[] for _ in range(num_tiles)]
-                            pre, norm_layer = run_until_norm(batch, ops, sub_idx, N0k, local_q)
+                            pre, norm_layer, local_q = run_until_norm(batch, ops, sub_idx, N0k)
                             # accumulate per tile
                             parts = split_batch(pre, N0k, len(sub_idx))
                             for j, ii in enumerate(sub_idx):
                                 grp_param.add_tile(parts[j], norm_layer)
                                 if pre_norm_cache is not None:
-                                    pre_norm_cache[ii] = parts[j].detach().cpu()
+                                    pre_norm_cache[ii] = parts[j].detach()
+                                    if pending_store_res is not None:
+                                        pending_store_res[ii].extend(local_q[ii])
                             del batch, pre
                     norm_apply = grp_param.summary()
 
-                # pass 2: run stage
+                # inject pre-norm residuals captured in pass1 if caching is enabled
+                if pending_store_res is not None:
+                    for idx in range(num_tiles):
+                        if pending_store_res[idx]:
+                            residual_queues[idx].extend(pending_store_res[idx])
+                            pending_store_res[idx].clear()
+
+                # pass 2: run stage（使用跨阶段持久的 residual_queues，确保跨阶段的残差在其对应的 add_res 处被正确消费）
                 for key, idxs in groups.items():
-                    N0, H, W = key
+                    N0, Ck, H, W = key
                     micro = min(default_micro, len(idxs))
                     for start in range(0, len(idxs), micro):
                         sub = idxs[start:start+micro]
